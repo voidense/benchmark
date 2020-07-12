@@ -1,4 +1,4 @@
-# Performance Benchmark of Common Comparisons
+# Benchmark of common constructs
 
 ## Intent
 
