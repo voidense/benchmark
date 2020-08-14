@@ -1,3 +1,3 @@
 add_executable(bm_chrono_vs_gettimeofday_or_clockgettime  "benchmark.cc")
-target_link_libraries(bm_chrono_vs_gettimeofday_or_clockgettime benchmark)
+target_link_libraries(bm_chrono_vs_gettimeofday_or_clockgettime benchmark::benchmark)
 

@@ -5,10 +5,10 @@
 # BOOST_USE_STATIC_LIBS, whether or not to build boost as static library
 # All of above shall be defined before including this file
 
-# BOOST_INSTALL_ROOT, the location where boost will be installed
+# INSTALL_ROOT, the location where boost will be installed
 
-if(NOT BOOST_COMPONENTS)
-  message(FATAL_ERROR "No COMPONENTS specified for Boost")
+if(NOT BOOST_VERSION)
+  message(FATAL_ERROR "No BOOST_VERSION specified for Boost")
 endif()
 
 # Create a list(string) for the build command (e.g. --with-program_options;--with-system)
@@ -17,9 +17,9 @@ foreach(component ${BOOST_COMPONENTS})
   list(APPEND BOOST_COMPONENTS_FOR_BUILD --with-${component})
 endforeach()
 
-if(NOT BOOST_INSTALL_ROOT)
-  message(STATUS "BOOST_INSTALL_ROOT is not defined, using project_binary_dir")
-  set(BOOST_INSTALL_ROOT ${PROJECT_BINARY_DIR} CACHE PATH "")
+if(NOT INSTALL_ROOT)
+  message(STATUS "INSTALL_ROOT is not defined, using project_binary_dir")
+  set(INSTALL_ROOT ${PROJECT_BINARY_DIR} CACHE PATH "")
 endif()
 
 if(BOOST_USE_STATIC_LIBS)
@@ -43,15 +43,15 @@ string(REPLACE "." "_" BOOST_VERSION_REFORMATTED ${BOOST_VERSION})
 include(ExternalProject)
 ExternalProject_Add(Boost
   URL http://sourceforge.net/projects/boost/files/boost/${BOOST_VERSION}/boost_${BOOST_VERSION_REFORMATTED}.tar.gz
-  CONFIGURE_COMMAND ./bootstrap.sh --prefix=${BOOST_INSTALL_ROOT}
+  CONFIGURE_COMMAND ./bootstrap.sh --prefix=${INSTALL_ROOT}
   BUILD_COMMAND CXX=${CMAKE_CXX_COMPILER} 
-                ./b2 -j16
+                ./b2
                 cxxflags=-fPIC
                 ${BOOST_STATIC_LINK}
                 threading=multi
-                --prefix=${BOOST_INSTALL_ROOT}
+                --prefix=${INSTALL_ROOT}
                 ${BOOST_COMPONENTS_FOR_BUILD}
                 install
   INSTALL_COMMAND ""
   BUILD_IN_SOURCE true
-  INSTALL_DIR ${BOOST_INSTALL_ROOT})
+  INSTALL_DIR ${INSTALL_ROOT})
