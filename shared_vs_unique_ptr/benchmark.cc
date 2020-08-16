@@ -24,6 +24,7 @@ static void BM_construct_and_destruct_shared_ptr(benchmark::State& state) {
     benchmark::DoNotOptimize(p);
   }
 }
+BENCHMARK(BM_construct_and_destruct_shared_ptr);
 
 static void BM_construct_and_destruct_intrusive_ptr(benchmark::State& state) {
   for (auto _ : state) {
@@ -31,6 +32,7 @@ static void BM_construct_and_destruct_intrusive_ptr(benchmark::State& state) {
     benchmark::DoNotOptimize(p);
   }
 }
+BENCHMARK(BM_construct_and_destruct_intrusive_ptr);
 
 static void BM_construct_and_destruct_unique_ptr(benchmark::State& state) {
   for (auto _ : state) {
@@ -38,6 +40,7 @@ static void BM_construct_and_destruct_unique_ptr(benchmark::State& state) {
     benchmark::DoNotOptimize(p);
   }
 }
+BENCHMARK(BM_construct_and_destruct_unique_ptr);
 
 static void BM_construct_and_destruct_raw_ptr(benchmark::State& state) {
   for (auto _ : state) {
@@ -46,6 +49,7 @@ static void BM_construct_and_destruct_raw_ptr(benchmark::State& state) {
     delete p;
   }
 }
+BENCHMARK(BM_construct_and_destruct_raw_ptr);
 
 static void BM_copy_shared_ptr(benchmark::State& state) {
   auto p = std::make_shared<X>();
@@ -57,6 +61,7 @@ static void BM_copy_shared_ptr(benchmark::State& state) {
     benchmark::DoNotOptimize(q);
   }
 }
+BENCHMARK(BM_copy_shared_ptr);
 
 static void BM_copy_intrusive_ptr(benchmark::State& state) {
   boost::intrusive_ptr<X> p(new X());
@@ -68,6 +73,7 @@ static void BM_copy_intrusive_ptr(benchmark::State& state) {
     benchmark::DoNotOptimize(q);
   }
 }
+BENCHMARK(BM_copy_intrusive_ptr);
 
 static void BM_move_unique_ptr(benchmark::State& state) {
   auto p = std::make_unique<X>();
@@ -79,6 +85,7 @@ static void BM_move_unique_ptr(benchmark::State& state) {
     benchmark::DoNotOptimize(q);
   }
 }
+BENCHMARK(BM_move_unique_ptr);
 
 static void BM_copy_raw_ptr(benchmark::State& state) {
   auto p = new X();
@@ -92,24 +99,76 @@ static void BM_copy_raw_ptr(benchmark::State& state) {
   }
   delete p;
 }
-
-BENCHMARK(BM_construct_and_destruct_shared_ptr);
-
-BENCHMARK(BM_construct_and_destruct_intrusive_ptr);
-
-BENCHMARK(BM_construct_and_destruct_unique_ptr);
-
-BENCHMARK(BM_construct_and_destruct_raw_ptr);
-
-
-BENCHMARK(BM_copy_shared_ptr);
-
-BENCHMARK(BM_copy_intrusive_ptr);
-
-BENCHMARK(BM_move_unique_ptr);
-
 BENCHMARK(BM_copy_raw_ptr);
 
+struct workload {
+  char buffer_[4096];
+  void copy_string_len(char const *b, size_t const len) {
+    memcpy(buffer_, b, len); buffer_[len] = '\0';
+  }
+};
+
+struct workload_with_user_defined_ref_count : public workload {
+  std::atomic<size_t> ref_cnt{0};
+};
+
+inline void intrusive_ptr_add_ref(workload_with_user_defined_ref_count* x){
+  x->ref_cnt.fetch_add(1, std::memory_order_relaxed);
+}
+
+inline void intrusive_ptr_release(workload_with_user_defined_ref_count* x){
+  if (x->ref_cnt.fetch_sub(1, std::memory_order_release) == 1) {
+    x->ref_cnt.load(std::memory_order_acquire);
+    delete x;
+  }
+}
+
+constexpr size_t iterations = 1000;
+
+static void BM_shared_ptr_with_workload(benchmark::State& state) {
+  for (auto _ : state) {
+    for (size_t i = 0; i < iterations; ++i) {
+      auto p = std::make_shared<workload>();
+      p->copy_string_len("testing", 7);
+      benchmark::DoNotOptimize(p);
+    }
+  }
+}
+BENCHMARK(BM_shared_ptr_with_workload);
+
+static void BM_intrusive_ptr_with_workload(benchmark::State& state) {
+  for (auto _ : state) {
+    for (size_t i = 0; i < iterations; ++i) {
+      boost::intrusive_ptr<workload_with_user_defined_ref_count> p(new workload_with_user_defined_ref_count());
+      p->copy_string_len("testing", 7);
+      benchmark::DoNotOptimize(p);
+    }
+  }
+}
+BENCHMARK(BM_intrusive_ptr_with_workload);
+
+static void BM_raw_ptr_with_workload(benchmark::State& state) {
+  for (auto _ : state) {
+    for (size_t i = 0; i < iterations; ++i) {
+      auto p = new workload();
+      p->copy_string_len("testing", 7);
+      benchmark::DoNotOptimize(p);
+      delete p;
+    }
+  }
+}
+BENCHMARK(BM_raw_ptr_with_workload);
+
+static void BM_unique_ptr_with_workload(benchmark::State& state) {
+  for (auto _ : state) {
+    for (size_t i = 0; i < iterations; ++i) {
+      auto p = std::make_unique<workload>();
+      p->copy_string_len("testing", 7);
+      benchmark::DoNotOptimize(p);
+    }
+  }
+}
+BENCHMARK(BM_unique_ptr_with_workload);
 
 BENCHMARK_MAIN();
 
