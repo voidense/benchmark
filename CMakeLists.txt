@@ -65,5 +65,6 @@ else()
   add_subdirectory(string_vs_sstream_in_concat)
   add_subdirectory(any_vs_inheritance)
   add_subdirectory(json_parsers)
+  add_subdirectory(std_function_vs_virtual_function)
 
 endif()
